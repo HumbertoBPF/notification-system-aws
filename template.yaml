@@ -1,0 +1,71 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  notification-system-aws
+
+  Sample SAM Template for notification-system-aws
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 128
+    Runtime: python3.9
+    Architectures:
+    - x86_64
+    Tracing: Active
+    LoggingConfig:
+      LogFormat: JSON
+  Api:
+    TracingEnabled: true
+
+Resources:
+  EmailNotificationLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: email_notification/
+      Handler: app.lambda_handler
+      Environment:
+        Variables:
+          TopicArn: !Ref EmailNotificationTopic
+      Events:
+        EmailNotificationEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt EmailNotificationQueue.Arn
+      Policies:
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt EmailNotificationTopic.TopicName
+  SmsNotificationLambda:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: sms_notification/
+      Handler: app.lambda_handler
+      Environment:
+        Variables:
+          TopicArn: !Ref SmsNotificationTopic
+      Events:
+        SmsNotificationEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt SmsNotificationQueue.Arn
+      Policies:
+        - SNSPublishMessagePolicy:
+            TopicName: !GetAtt SmsNotificationTopic.TopicName
+  EmailNotificationQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      FifoQueue: true
+      QueueName: "email-notification-queue.fifo"
+  SmsNotificationQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      FifoQueue: true
+      QueueName: "sms-notification-queue.fifo"
+  EmailNotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: "email-notification-topic"
+  SmsNotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: "sms-notification-topic"
